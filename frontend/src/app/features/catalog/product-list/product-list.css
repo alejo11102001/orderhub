@@ -1,0 +1,3 @@
+table { border-collapse: collapse; width: 100%; }
+th, td { border-bottom: 1px solid #ddd; padding: .5rem; text-align: left; }
+.pager { display: flex; gap: 1rem; align-items: center; margin-top: 1rem; }
