@@ -6,10 +6,34 @@ services:
       POSTGRES_DB: orderhub
       POSTGRES_USER: orderhub
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orderhub -d orderhub"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ../../backend
+    container_name: orderhub-backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orderhub
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build: ../../frontend
+    container_name: orderhub-frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
 
 volumes:
   pgdata:
