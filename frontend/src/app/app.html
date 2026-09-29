@@ -1,1 +1,12 @@
-<router-outlet />
+<nav>
+  <a routerLink="/products">Catálogo</a>
+  @if (auth.isLoggedIn()) {
+    <button (click)="logout()">Salir</button>
+  } @else {
+    <a routerLink="/login">Entrar</a>
+  }
+</nav>
+
+<main>
+  <router-outlet />
+</main>
