@@ -1,0 +1,25 @@
+- name: Preparar servidor OrderHub
+  hosts: servers
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Bootstrap de Python (raw no necesita Python en destino)
+      ansible.builtin.raw: apk add --no-cache python3
+      changed_when: false
+
+    - name: Recoger facts ahora que Python existe
+      ansible.builtin.setup:
+
+    - name: Instalar paquetes base
+      ansible.builtin.apk:
+        name:
+          - curl
+          - git
+        state: present
+        update_cache: true
+
+    - name: Crear directorio de la app
+      ansible.builtin.file:
+        path: /opt/orderhub
+        state: directory
+        mode: "0755"
