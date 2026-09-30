@@ -14,7 +14,7 @@
     </header>
     <ul>
       @for (i of o.items; track i.productId) {
-        <li>Producto {{ i.productId }} × {{ i.quantity }}</li>
+        <li>{{ i.productName }} × {{ i.quantity }}</li>
       }
     </ul>
     @if (o.status === 'PENDING') {

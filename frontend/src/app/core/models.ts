@@ -23,6 +23,7 @@ export interface Page<T> {
 
 export interface OrderItem {
   productId: number;
+  productName: string;
   quantity: number;
   unitPrice: number;
 }

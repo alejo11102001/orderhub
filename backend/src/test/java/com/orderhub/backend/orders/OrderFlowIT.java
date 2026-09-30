@@ -65,7 +65,10 @@ class OrderFlowIT {
         String email = newUser();
         Product p = newProduct(5);
 
-        Long orderId = orderService.create(email, req(p.getId(), 2)).id();
+        var created = orderService.create(email, req(p.getId(), 2));
+        Long orderId = created.id();
+        assertThat(created.items().get(0).productName()).isEqualTo(p.getName());
+        
         assertThat(productRepository.findById(p.getId()).orElseThrow().getStock()).isEqualTo(3);
 
         orderService.cancel(orderId, email, false);

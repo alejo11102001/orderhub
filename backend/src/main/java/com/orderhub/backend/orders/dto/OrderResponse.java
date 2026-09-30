@@ -18,7 +18,7 @@ public record OrderResponse(
         return new OrderResponse(
                 o.getId(), o.getStatus(), o.getTotal(), o.getCreatedAt(),
                 o.getItems().stream()
-                        .map(i -> new OrderItemResponse(i.getProductId(), i.getQuantity(), i.getUnitPrice()))
+                        .map(i -> new OrderItemResponse(i.getProductId(), i.getProductName(), i.getQuantity(), i.getUnitPrice()))
                         .toList());
     }
 }
