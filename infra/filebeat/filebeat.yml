@@ -1,0 +1,22 @@
+filebeat.autodiscover:
+  providers:
+    - type: docker
+      hints.enabled: true
+      templates:
+        - condition:
+            equals:
+              docker.container.name: orderhub-backend
+          config:
+            - type: container
+              paths:
+                - /var/lib/docker/containers/${data.docker.container.id}/*.log
+              json.keys_under_root: true
+              json.add_error_key: true
+
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"]
+  index: "orderhub-logs-%{+yyyy.MM.dd}"
+
+setup.template.name: "orderhub-logs"
+setup.template.pattern: "orderhub-logs-*"
+setup.ilm.enabled: false
