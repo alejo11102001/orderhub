@@ -1,6 +1,9 @@
 package com.orderhub.backend.common;
 
 import com.orderhub.backend.catalog.ProductNotFoundException;
+import com.orderhub.backend.orders.InsufficientStockException;
+import com.orderhub.backend.orders.InvalidOrderStateException;
+import com.orderhub.backend.orders.OrderNotFoundException;
 import com.orderhub.backend.auth.EmailAlreadyExistsException;
 import com.orderhub.backend.auth.InvalidCredentialsException;
 import org.springframework.http.HttpStatus;
@@ -41,5 +44,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidCredentialsException.class)
     public ProblemDetail handleBadCredentials(InvalidCredentialsException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());
+    }
+
+        @ExceptionHandler(OrderNotFoundException.class)
+    public ProblemDetail handleOrderNotFound(OrderNotFoundException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler({InsufficientStockException.class, InvalidOrderStateException.class})
+    public ProblemDetail handleOrderConflict(RuntimeException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
     }
 }
