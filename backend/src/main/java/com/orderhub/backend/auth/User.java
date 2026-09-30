@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 @Entity
@@ -33,6 +34,6 @@ public class User {
 
     @PrePersist
     void onCreate() {
-        createdAt = LocalDateTime.now();
+        createdAt = LocalDateTime.now(Clock.systemUTC());
     }
 }

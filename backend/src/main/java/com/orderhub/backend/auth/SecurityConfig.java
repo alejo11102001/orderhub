@@ -31,7 +31,7 @@ import java.nio.charset.StandardCharsets;
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain filterChain(HttpSecurity http) {
         http
                 // CSRF desactivado: API stateless autenticada con JWT en cabecera (sin cookies de sesión)
                 .csrf(csrf -> csrf.disable())

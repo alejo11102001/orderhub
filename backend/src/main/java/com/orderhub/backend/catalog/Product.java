@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 
@@ -37,6 +38,6 @@ public class Product {
 
     @PrePersist 
     void onCreate(){
-        createdAt = LocalDateTime.now();
+        createdAt = LocalDateTime.now(Clock.systemUTC());
     }
 }
