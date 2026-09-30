@@ -1,0 +1,29 @@
+<h1>Carrito</h1>
+
+@if (cart.lines().length === 0) {
+  <p>Tu carrito está vacío.</p>
+} @else {
+  <table>
+    <thead>
+      <tr><th>Producto</th><th>Cantidad</th><th>Subtotal</th><th></th></tr>
+    </thead>
+    <tbody>
+      @for (l of cart.lines(); track l.product.id) {
+        <tr>
+          <td>{{ l.product.name }}</td>
+          <td>{{ l.quantity }}</td>
+          <td>{{ l.product.price * l.quantity | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</td>
+          <td><button (click)="cart.remove(l.product.id)">Quitar</button></td>
+        </tr>
+      }
+    </tbody>
+  </table>
+
+  <p><strong>Total: {{ cart.total() | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</strong></p>
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+
+  <button (click)="checkout()" [disabled]="loading()">Crear pedido</button>
+}

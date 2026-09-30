@@ -20,3 +20,24 @@ export interface Page<T> {
   number: number;
   size: number;
 }
+
+export interface OrderItem {
+  productId: number;
+  quantity: number;
+  unitPrice: number;
+}
+
+export type OrderStatus = 'PENDING' | 'PAID' | 'CANCELLED';
+
+export interface Order {
+  id: number;
+  status: OrderStatus;
+  total: number;
+  createdAt: string;
+  items: OrderItem[];
+}
+
+export interface CartLine {
+  product: Product;
+  quantity: number;
+}

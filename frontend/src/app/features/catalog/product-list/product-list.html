@@ -2,7 +2,7 @@
 
 <table>
   <thead>
-    <tr><th>Nombre</th><th>Descripción</th><th>Precio</th><th>Stock</th></tr>
+    <tr><th>Nombre</th><th>Descripción</th><th>Precio</th><th>Stock</th><th></th></tr>
   </thead>
   <tbody>
     @for (p of products(); track p.id) {
@@ -11,9 +11,12 @@
         <td>{{ p.description }}</td>
         <td>{{ p.price | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</td>
         <td>{{ p.stock }}</td>
+        <td>
+          <button (click)="cart.add(p)" [disabled]="p.stock === 0">Agregar</button>
+        </td>
       </tr>
     } @empty {
-      <tr><td colspan="4">No hay productos</td></tr>
+      <tr><td colspan="5">No hay productos</td></tr>
     }
   </tbody>
 </table>

@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { ProductService } from '../../../core/product.service';
 import { Page, Product } from '../../../core/models';
+import { CartService } from '../../../core/cart.service';
 
 @Component({
   selector: 'app-product-list',
@@ -11,7 +12,8 @@ import { Page, Product } from '../../../core/models';
 })
 export class ProductList {
   private service = inject(ProductService);
-
+  
+  cart = inject(CartService);
   products = signal<Product[]>([]);
   page = signal(0);
   totalPages = signal(0);

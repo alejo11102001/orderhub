@@ -1,0 +1,33 @@
+<h1>Mis pedidos</h1>
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+@for (o of orders(); track o.id) {
+  <section class="order">
+    <header>
+      <strong>Pedido #{{ o.id }}</strong>
+      <span class="status" [class]="o.status">{{ o.status }}</span>
+      <span>{{ o.createdAt | date: 'short' }}</span>
+      <span>{{ o.total | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</span>
+    </header>
+    <ul>
+      @for (i of o.items; track i.productId) {
+        <li>Producto {{ i.productId }} × {{ i.quantity }}</li>
+      }
+    </ul>
+    @if (o.status === 'PENDING') {
+      <button (click)="pay(o.id)">Pagar</button>
+      <button (click)="cancel(o.id)">Cancelar</button>
+    }
+  </section>
+} @empty {
+  <p>Aún no tienes pedidos.</p>
+}
+
+<div class="pager">
+  <button (click)="load(page() - 1)" [disabled]="page() === 0">Anterior</button>
+  <span>Página {{ page() + 1 }} de {{ totalPages() || 1 }}</span>
+  <button (click)="load(page() + 1)" [disabled]="page() + 1 >= totalPages()">Siguiente</button>
+</div>

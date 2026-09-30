@@ -1,6 +1,8 @@
 <nav>
   <a routerLink="/products">Catálogo</a>
   @if (auth.isLoggedIn()) {
+    <a routerLink="/cart">Carrito ({{ cart.count() }})</a>
+    <a routerLink="/orders">Mis pedidos</a>
     <button (click)="logout()">Salir</button>
   } @else {
     <a routerLink="/login">Entrar</a>
