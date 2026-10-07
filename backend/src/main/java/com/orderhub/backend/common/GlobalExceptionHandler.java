@@ -7,7 +7,10 @@ import com.orderhub.backend.orders.OrderNotFoundException;
 import com.orderhub.backend.auth.EmailAlreadyExistsException;
 import com.orderhub.backend.auth.InvalidCredentialsException;
 import org.springframework.dao.DataIntegrityViolationException;
+import com.orderhub.backend.auth.TooManyAttemptsException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -50,6 +53,15 @@ public class GlobalExceptionHandler {
         @ExceptionHandler(OrderNotFoundException.class)
     public ProblemDetail handleOrderNotFound(OrderNotFoundException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler(TooManyAttemptsException.class)
+    public ResponseEntity<ProblemDetail> handleTooManyAttempts(TooManyAttemptsException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage());
+        problem.setProperty("retryAfterSeconds", ex.getRetryAfterSeconds());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(ex.getRetryAfterSeconds()))
+                .body(problem);
     }
 
     /** Violación de clave foránea/unicidad, p. ej. borrar un producto que ya tiene pedidos. */
