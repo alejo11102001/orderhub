@@ -46,6 +46,8 @@ por instancia, aplicado en `AuthController`:
   Kubernetes) el máximo efectivo es hasta `réplicas × límite`, y el contador
   se pierde al reiniciar un pod. Para un límite global haría falta Redis o
   un almacén compartido; `limit-req` en el Ingress sería una defensa adicional.
+- Verificado en kind con 2 réplicas: el balanceo reparte los intentos, así que los 429 empiezan tras ~5 fallos **por réplica**
+  (hacia el 9.º intento), no tras 5 en total.
 - Un atacante con muchas IPs, o que rote emails desde una misma IP, no queda
   limitado (la clave incluye el email). Sigue siendo una defensa básica.
 - Si el proxy no es de confianza o no envía `X-Forwarded-For`, todos los

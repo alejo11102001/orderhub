@@ -42,6 +42,13 @@ el ADR 0001).
 Los DTO son `record`s; la validación usa Bean Validation; la inyección es por
 constructor (Lombok `@RequiredArgsConstructor`).
 
+### Límite de intentos de autenticación
+
+`AuthController` consulta un `AttemptLimiter` (en memoria, por IP+email) antes de `login` y `register`; los fallos
+cuentan y un éxito reinicia el contador. Al superar el máximo responde 429 con `Retry-After`
+([ADR 0009](adr/0009-rate-limiting-login.md)). La IP real llega por `X-Forwarded-For`
+(`server.forward-headers-strategy=native`; nginx lo añade).
+
 ### Seguridad en una frase
 
 Filtro JWT stateless (HS256). `/api/auth/**`, `GET /api/products/**` y
@@ -70,7 +77,9 @@ resto exige autenticación. Detalle en [seguridad.md](seguridad.md).
 5. **Todo o nada.** Si cualquier línea falla, la transacción completa se
    revierte, incluido el stock ya descontado de otras líneas. El cliente
    recibe `409 Conflict`.
-6. **Respuesta.** `201 Created` con el pedido en estado `PENDING`.
+6. **Respuesta y métrica.** `201 Created` con el pedido en estado `PENDING`. Tras el *commit* se incrementa el contador
+   Micrometer `orders.created{status="PENDING"}` (Prometheus lo expone como `orders_total`); pagar y cancelar
+   incrementan `orders.status.changed{to=...}`. Si la transacción revierte, no se cuenta.
 7. **Pagar.** `POST /api/orders/{id}/pay`: solo desde `PENDING` hacia `PAID`;
    otro estado devuelve 409. Es un cambio de estado: **no hay pasarela de pago**.
 8. **Cancelar.** `POST /api/orders/{id}/cancel`: solo desde `PENDING`; devuelve

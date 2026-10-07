@@ -20,9 +20,15 @@ gestión de secretos, infraestructura como código y Kubernetes.
 
 Vista móvil (390 px): ![Catálogo móvil](docs/img/app-catalogo-movil.png)
 
-Dashboard de Grafana (aprovisionado desde `infra/grafana/dashboards`):
+Límite de intentos de login (429 con el tiempo de espera): ![Login 429](docs/img/app-login-429.png)
+
+Dashboard de Grafana (aprovisionado desde `infra/grafana/dashboards`, con paneles de pedidos creados y errores 5xx):
 
 ![Grafana](docs/img/grafana-dashboard.png)
+
+Kibana, búsqueda guardada «errores del backend» (`log.level: ERROR`; se importa con `infra/kibana/import-dataview.ps1`):
+
+![Kibana Discover](docs/img/kibana-discover-errores.png)
 
 </details>
 
@@ -65,11 +71,14 @@ Más detalle (módulos, flujo de un pedido, modelo de datos):
   verificado con un test de concurrencia (10 compradores, 1 unidad).
 - **Transacciones**: un pedido con varias líneas es todo o nada.
 - **Seguridad**: JWT, roles, aislamiento de pedidos entre usuarios (404 y no 403),
-  CORS por entorno, CSRF desactivado con justificación documentada.
-- **Pipeline**: tests, build, escaneo Trivy y publicación de imágenes con tag
-  inmutable por commit.
+  rate limiting de login ([ADR 0009](docs/adr/0009-rate-limiting-login.md)), cabeceras de seguridad y CSP en nginx,
+  contenedores sin root, NetworkPolicy, CORS por entorno y CSRF desactivado con justificación documentada.
+- **Pipeline**: tests con reporte de cobertura, escaneo Trivy y publicación de imágenes con tag
+  inmutable por commit; análisis Sonar opcional.
 - **Kubernetes**: probes de liveness/readiness, backend con 2 réplicas,
   rolling update y rollback ([runbook](docs/operacion.md#runbook-de-rollback)).
+- **Observabilidad**: métricas de negocio (`orders.created`), dashboard de Grafana versionado, alertas de Prometheus
+  (backend caído, 5xx, heap) y logs ECS en Kibana.
 - **Arranque reproducible**: admin y datos de demo se crean por configuración,
   sin SQL manual.
 
@@ -104,10 +113,16 @@ Requisitos: Docker Desktop. Los comandos son para PowerShell.
    docker compose up -d --build backend frontend
    ```
 
-   Opcionalmente `docker compose up -d` levanta también Prometheus, Grafana,
-   Elasticsearch, Kibana y Filebeat.
+   Opcionalmente `docker compose up -d` levanta también Prometheus (con alertas), Grafana,
+   Elasticsearch, Kibana y Filebeat. Para tener el Data View de logs en Kibana:
+
+   ```powershell
+   ./infra/kibana/import-dataview.ps1
+   ```
 
 5. **Abrir la app**: http://localhost:4200
+
+Todos los puertos se publican **solo en `127.0.0.1`** (no son accesibles desde otras máquinas de la red).
 
 | Servicio | URL |
 |---|---|
@@ -170,6 +185,8 @@ Todos los valores de ejemplo son ficticios.
 | `SPRING_PROFILES_ACTIVE` | backend | `k8s` desactiva Vault y lee secretos de variables; `demo` activa los datos de demo. | `k8s` |
 | `APP_CORS_ALLOWED_ORIGINS` | backend | Orígenes CORS permitidos (`app.cors.allowed-origins`). Por defecto `http://localhost:4200`; el perfil `k8s` usa `http://localhost:8081`. | `http://localhost:4200` |
 | `APP_JWT_EXPIRATION_MINUTES` | backend | Vida del token (`app.jwt.expiration-minutes`). Por defecto 60. | `60` |
+| `APP_SECURITY_LOGIN_MAX_ATTEMPTS` | backend | Fallos de login/registro permitidos por IP+email en la ventana (`app.security.login-max-attempts`). Por defecto 5. | `5` |
+| `APP_SECURITY_LOGIN_WINDOW_MINUTES` | backend | Ventana del límite (`app.security.login-window-minutes`). Por defecto 15. | `15` |
 | `LOGGING_STRUCTURED_FORMAT_CONSOLE` | backend (Compose) | `ecs` emite logs JSON para Filebeat. | `ecs` |
 
 La referencia de `.env` es [`infra/docker/.env.example`](infra/docker/.env.example).
@@ -180,8 +197,8 @@ Prefijo `/api`. Los errores usan `ProblemDetail` (RFC 9457).
 
 | Método y ruta | Acceso | Descripción | Respuestas |
 |---|---|---|---|
-| `POST /auth/register` | Público | Crea un `CUSTOMER` (`email`, `password` 8–72). | 201; 400 validación; 409 correo existente |
-| `POST /auth/login` | Público | Devuelve `{accessToken, tokenType, expiresInSeconds}`. | 200; 401 credenciales |
+| `POST /auth/register` | Público | Crea un `CUSTOMER` (`email`, `password` 8–72). | 201; 400 validación; 409 correo existente; 429 demasiados fallos |
+| `POST /auth/login` | Público | Devuelve `{accessToken, tokenType, expiresInSeconds}`. | 200; 401 credenciales; 429 demasiados fallos (con `Retry-After`) |
 | `GET /products` | Público | Lista paginada (`page`, `size`, `sort`). | 200 |
 | `GET /products/{id}` | Público | Un producto. | 200; 404 |
 | `POST /products` | ADMIN | Crea un producto. | 201; 400; 403 |
@@ -193,8 +210,8 @@ Prefijo `/api`. Los errores usan `ProblemDetail` (RFC 9457).
 | `POST /orders/{id}/pay` | Autenticado | `PENDING → PAID`. | 200; 409 estado inválido |
 | `POST /orders/{id}/cancel` | Autenticado | `PENDING → CANCELLED` y devuelve stock. | 200; 409 estado inválido |
 
-Fuera de `/api`: `GET /actuator/health/**` y `GET /actuator/prometheus`
-(públicos, solo para entorno local).
+Fuera de `/api`: `GET /actuator/health/**` (público) y `GET /actuator/prometheus` (público en el backend, pero no se enruta
+por nginx ni por el Ingress y los puertos de Compose están en loopback). En el perfil `k8s` solo se expone `health`.
 
 ## Tests
 
@@ -213,61 +230,74 @@ npx ng test --no-watch
 npx ng build
 ```
 
-CI ejecuta lo mismo en [`ci.yml`](.github/workflows/ci.yml).
+Cobertura (JaCoCo): `./mvnw verify "-Dtest=*Test,*IT"` genera `backend/target/site/jacoco/index.html`.
+La cobertura de líneas del backend es de **93,7 %** (297/317 líneas, sin exclusiones; medida en esta versión).
+
+## CI/CD
+
+- [`ci.yml`](.github/workflows/ci.yml): tests y `verify` del backend (con el reporte JaCoCo publicado como artefacto),
+  `ng test` y `ng build` del frontend, con caché de Maven y npm.
+  Incluye un job **opcional** de SonarQube que no bloquea: solo corre si existen los secrets `SONAR_TOKEN` y
+  `SONAR_HOST_URL`; si no, se omite con un aviso. En local SonarQube corre con
+  `infra/docker/docker-compose.sonar.yml` (no es accesible desde los runners de GitHub), por eso no se ejecuta en CI por defecto.
+- [`images.yml`](.github/workflows/images.yml): construye backend y frontend, los escanea con Trivy (CRITICAL con parche),
+  y publica `sha-<commit>` y `latest` en GHCR. No se dispara por cambios solo de `docs/`, `infra/k8s/`, `scripts/` o `*.md`.
 
 ## Kubernetes (kind)
 
+Guía completa (crear clúster, Secret, aplicar, demo data, rolling update, rollback y problemas conocidos):
+**[infra/k8s/README.md](infra/k8s/README.md)**. Resumen:
+
 ```powershell
-kind create cluster --name orderhub --config infra/k8s/kind-config.yaml
+kind create cluster --name orderhub --config infra/k8s/kind/kind-config.yaml
 kubectl apply -f infra/k8s/00-namespace.yaml
 kubectl create secret generic orderhub-secrets -n orderhub `
-  --from-literal=DB_PASSWORD=<db> `
-  --from-literal=JWT_SECRET=<jwt-min-32-caracteres> `
-  --from-literal=APP_ADMIN_EMAIL=admin@example.com `
-  --from-literal=APP_ADMIN_PASSWORD=<min-12-caracteres>
+  --from-literal=DB_PASSWORD=<db> --from-literal=JWT_SECRET=<jwt-min-32-caracteres> `
+  --from-literal=APP_ADMIN_EMAIL=admin@example.com --from-literal=APP_ADMIN_PASSWORD=<min-12-caracteres>
 kubectl apply -f infra/k8s/
 ```
 
-`APP_ADMIN_EMAIL` y `APP_ADMIN_PASSWORD` son opcionales (las referencias del
-Deployment son `optional: true`). Para añadirlas a un Secret existente,
-recréalo o aplícalas con `kubectl edit secret orderhub-secrets -n orderhub` y
-reinicia el backend. El Ingress sirve la app en http://localhost:8081.
+App en http://localhost:8081. `DB_PASSWORD` debe coincidir con la contraseña con la que se inicializó el volumen de Postgres.
 
 ### Tags inmutables y rolling update
 
 Cada commit en `main` publica `ghcr.io/alejo11102001/orderhub-{backend,frontend}:sha-<commit>`
 (y `latest` solo por conveniencia). Los manifiestos **fijan** `sha-<commit>`
-([ADR 0005](docs/adr/0005-tags-inmutables.md)), así que un despliegue o un
-rollback siempre apunta a una imagen concreta.
+([ADR 0005](docs/adr/0005-tags-inmutables.md)), así que un despliegue o un rollback siempre apunta a una imagen concreta.
 
-Para desplegar: cambia el `image:` en `infra/k8s/20-backend.yaml` /
-`30-frontend.yaml`, haz commit y `kubectl apply -f infra/k8s/`. El backend
-(2 réplicas, con *readiness* y *liveness probes*) hace un *rolling update*:
-Kubernetes no retira un pod viejo hasta que el nuevo responde
-`/actuator/health/readiness`. Para volver atrás:
-`kubectl -n orderhub rollout undo deployment/backend`. Pasos completos,
-verificación y reconciliación con Git en [docs/operacion.md](docs/operacion.md).
+```powershell
+./scripts/update-image-tags.ps1 -Sha <commit>     # actualiza 20-backend.yaml y 30-frontend.yaml
+git commit -am "feat(k8s): pin images to sha-<commit>"
+kubectl apply -f infra/k8s/
+kubectl -n orderhub rollout status deployment/backend
+```
+
+El backend (2 réplicas, con *readiness* y *liveness probes*) hace un *rolling update*: Kubernetes no retira un pod
+viejo hasta que el nuevo responde `/actuator/health/readiness`. Para volver atrás:
+`kubectl -n orderhub rollout undo deployment/backend`. Verificación y reconciliación con Git en
+[docs/operacion.md](docs/operacion.md#runbook-de-rollback).
 
 ## Documentación
 
 - [Arquitectura](docs/arquitectura.md): módulos, flujo de un pedido, modelo de datos.
 - [Operación](docs/operacion.md): métricas, logs, Vault, runbook de rollback.
 - [Seguridad](docs/seguridad.md): modelo de amenazas, decisiones y límites.
-- [ADRs](docs/adr): decisiones de diseño 0001–0008.
+- [ADRs](docs/adr): decisiones de diseño 0001–0009.
 
 ## Limitaciones conocidas
 
 **Seguridad e infraestructura**
 
-- Vault en modo dev con token raíz y datos en memoria (en producción: AppRole + almacenamiento persistente).
+- Vault en modo dev con token raíz y datos en memoria.
 - Un Secret de Kubernetes solo está codificado en base64.
-- Sin TLS (todo es HTTP) ni cabeceras de seguridad (CSP, HSTS) en nginx.
-- Actuator/Prometheus, Elasticsearch y Kibana sin autenticación (solo entorno local).
-- Sin rate limiting en el login ni bloqueo de cuentas; sin recuperación de contraseña.
+- Sin TLS (todo es HTTP), por lo que no hay HSTS; la CSP necesita `style-src 'unsafe-inline'` por cómo Angular inserta estilos.
+- Elasticsearch, Kibana y Prometheus sin autenticación (solo entorno local, puertos en loopback).
+- El rate limiting de login es **por instancia** y en memoria ([ADR 0009](docs/adr/0009-rate-limiting-login.md)): con 2 réplicas el límite efectivo es mayor y se reinicia con el pod; no hay bloqueo de cuentas ni recuperación de contraseña.
 - Sin refresco ni revocación de tokens; el frontend no cierra la sesión al expirar el token (las peticiones devuelven 401).
+- El token de un usuario que ya no existe en la base de datos provoca un 500 al crear pedidos (no hay endpoint para borrar usuarios, pero ocurre si se borran a mano).
 - `images.yml` publica imágenes en cada push a `main` sin esperar a que CI pase.
-- SonarQube se ejecuta en local, no en CI.
-- Kubernetes es excesivo para este tamaño; se usó para aprender. Prometheus, Grafana y ELK no están desplegados en kind.
+- Las NetworkPolicy solo restringen tráfico entrante y dependen de que el CNI las aplique (kindnet lo hace).
+- Prometheus, Grafana y ELK no están desplegados en kind. El dashboard de Grafana exige Grafana ≥ 13 y su panel *Response Time* sigue vacío.
 
 **Producto**
 
@@ -277,3 +307,15 @@ verificación y reconciliación con Git en [docs/operacion.md](docs/operacion.md
 - Un ADMIN ve todos los pedidos en «Mis pedidos».
 - El stock mostrado en el carrito es el de cuando se cargó el catálogo; el 409 del servidor es la fuente de verdad.
 - Cambiar `APP_ADMIN_PASSWORD` no actualiza a un admin que ya existe.
+
+## Roadmap
+
+Lo que faltaría para llevarlo a producción (en orden aproximado de prioridad):
+
+1. **Secretos**: Vault real con almacenamiento persistente y AppRole (o el gestor del proveedor) en lugar del modo dev.
+2. **TLS**: certificados en el Ingress (cert-manager) y HSTS.
+3. **Rate limiting distribuido**: límite compartido entre réplicas (Redis) o en el gateway/Ingress.
+4. **Consistencia de eventos**: patrón *outbox* si se añaden integraciones o notificaciones asíncronas.
+5. **GitOps**: despliegue con Argo CD y promoción de tags por entorno en lugar de `kubectl apply` manual.
+6. **Calidad en CI**: SonarQube/SonarCloud accesible desde los runners y gate de calidad; escaneo de dependencias.
+7. **Producto**: pasarela de pago real, caducidad de pedidos pendientes, carrito persistente y refresco de tokens.

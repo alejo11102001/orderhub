@@ -17,5 +17,10 @@ orígenes permitidos por entorno.
   habría que reactivar CSRF.
 - El token en `sessionStorage` es legible por JavaScript: un XSS lo
   expondría. Se mitiga evitando `innerHTML` (Angular escapa los bindings por
-  defecto). **Pendiente**: el nginx del frontend aún no envía cabeceras de
-  seguridad (CSP, `X-Content-Type-Options`, etc.); ver `docs/seguridad.md`.
+  defecto) y con las cabeceras de seguridad que envía el nginx del frontend:
+  CSP con `script-src 'self'` (sin `unsafe-eval` ni scripts en línea; para ello
+  se desactivó `inlineCritical` en `angular.json`), `X-Frame-Options: DENY`,
+  `X-Content-Type-Options`, `Referrer-Policy` y `Permissions-Policy`. Límite:
+  `style-src` necesita `'unsafe-inline'` porque Angular inserta los estilos de
+  los componentes como `<style>`. Un XSS seguiría pudiendo leer `sessionStorage`
+  si lograra ejecutar script, pero la CSP lo dificulta (ver `docs/seguridad.md`).

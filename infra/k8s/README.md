@@ -138,6 +138,6 @@ Es idempotente (no duplica productos). Vuelve a `"false"` cuando no lo necesites
   kind load image-archive orderhub-backend.tar --name orderhub
   ```
 
-- **El backend tarda ~40-60 s en estar Ready** (arranque de Spring + Flyway); la *liveness probe*
-  espera 40 s antes de empezar.
+- **El backend tarda alrededor de un minuto en estar Ready** (arranque de Spring + Flyway; en la verificación con
+  estos manifiestos todos los pods estaban Ready a los ~60 s); la *liveness probe* espera 40 s antes de empezar.
 - El límite de intentos de login es **por réplica** ([ADR 0009](../../docs/adr/0009-rate-limiting-login.md)).

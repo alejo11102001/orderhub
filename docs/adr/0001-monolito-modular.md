@@ -32,5 +32,5 @@ simplicidad y porque el descuento debe ocurrir en la misma transacción.
 - Las fronteras se respetan por convención, no por el compilador (y la
   excepción anterior muestra que ya hay un acoplamiento entre `orders` y los
   repositorios de otros módulos).
-- Extraer un módulo exigirá mensajería (p. ej. RabbitMQ) y reemplazar
+- Camino de extracción de un módulo: mensajería (p. ej. RabbitMQ) y reemplazar
   llamadas directas y transacciones compartidas.

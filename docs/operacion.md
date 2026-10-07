@@ -46,6 +46,25 @@ El backend expone Micrometer en `/actuator/prometheus` con la etiqueta
    La segunda consulta es la latencia media: el backend no publica buckets de
    histograma, así que no hay percentiles con `histogram_quantile`.
 
+## Alertas (Prometheus)
+
+Las reglas están en `infra/prometheus/alerts.yml` (montadas en el contenedor de Prometheus y referenciadas por
+`rule_files`). Se ven en http://localhost:9090/alerts:
+
+| Alerta | Condición | Severidad |
+|---|---|---|
+| `BackendDown` | `up{job="orderhub-backend"} == 0` durante 1 min | critical |
+| `Backend5xxRateHigh` | respuestas 5xx / total > 5 % durante 5 min | warning |
+| `BackendHeapHigh` | heap usado / máximo > 90 % durante 5 min | warning |
+
+Validar sintaxis: `docker run --rm --entrypoint promtool -v ${PWD}/infra/prometheus:/etc/prometheus:ro prom/prometheus:latest check config /etc/prometheus/prometheus.yml`.
+`BackendDown` se verificó parando el backend (pasa a *firing* al cabo de ~1-2 minutos). **No hay Alertmanager**: las alertas
+solo se ven en la interfaz de Prometheus; para notificaciones habría que añadirlo.
+
+Los paneles nuevos del dashboard son *Pedidos creados por minuto* (`orders_total`, contador `orders.created`) y
+*Errores 5xx por segundo*. Si editas `infra/grafana/dashboards/spring-boot.json`, reinicia Grafana
+(`docker compose restart grafana`) para que recargue el archivo.
+
 ## Logs
 
 El backend escribe JSON en formato ECS por la salida estándar
@@ -67,6 +86,10 @@ kubectl -n orderhub logs deploy/backend --previous     # contenedor anterior si 
 1. Abre http://localhost:5601 → *Stack Management → Data Views → Create*.
 2. Nombre y patrón: `orderhub-logs-*`; campo de tiempo `@timestamp`.
 3. En *Discover* filtra, por ejemplo, `log.level : "ERROR"`.
+
+**Atajo por archivo**: `./infra/kibana/import-dataview.ps1` importa el Data View `orderhub-logs` y la búsqueda guardada
+*OrderHub - errores del backend* (`log.level: ERROR`). Se abre en
+http://localhost:5601/app/discover#/view/orderhub-errors. Es idempotente.
 
 Elasticsearch y Kibana consumen memoria (Elasticsearch fija 512 MB de heap);
 levántalos solo si los necesitas:
@@ -128,9 +151,13 @@ Las imágenes llevan tag inmutable `sha-<commit>` ([ADR 0005](adr/0005-tags-inmu
 ### Desplegar una versión nueva
 
 1. Haz push a `main` y espera a que `ci.yml` **y** `images.yml` terminen en
-   verde (`images.yml` no espera a CI).
-2. Edita `image:` en `infra/k8s/20-backend.yaml` y/o `30-frontend.yaml` con el
-   nuevo `sha-<commit>`, y haz commit.
+   verde (`images.yml` no espera a CI). Los commits que solo tocan `docs/`, `infra/k8s/`, `scripts/` o `*.md` no generan imágenes.
+2. Actualiza los tags y haz commit:
+
+   ```powershell
+   ./scripts/update-image-tags.ps1 -Sha <commit>
+   git commit -am "feat(k8s): pin images to sha-<commit>"
+   ```
 3. Aplica y vigila el *rolling update*:
 
    ```powershell
