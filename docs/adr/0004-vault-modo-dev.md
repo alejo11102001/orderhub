@@ -3,12 +3,14 @@
 Estado: Aceptado (solo para aprendizaje local)
 
 ## Contexto
-Se quería sacar `db.password` y `jwt.secret` del código y del `.env`, y
+Se quería sacar `db.password` y `jwt.secret` (y, opcionalmente,
+`admin.password`, ver ADR 0007) del código y del `.env`, y
 practicar el flujo de un gestor de secretos.
 
 ## Decisión
 Vault en modo dev dentro de Docker Compose, con Spring Cloud Vault leyendo
-`secret/orderhub`. En Kubernetes se usa un perfil `k8s` que desactiva Vault
+`secret/orderhub`. Compose sigue necesitando el `.env` para arrancar Vault
+(`VAULT_DEV_TOKEN`) y Postgres (`DB_PASSWORD`). En Kubernetes se usa un perfil `k8s` que desactiva Vault
 y toma los secretos de un Secret de Kubernetes.
 
 ## Alternativas consideradas

@@ -18,3 +18,7 @@ vulnerabilidades CRITICAL con parche disponible.
 + Trazabilidad de qué commit corre en cada entorno.
 - Cada despliegue exige actualizar el tag en el manifiesto (automatizable
   con GitOps o Kustomize).
+- El workflow `images.yml` se dispara en cada push a `main` y no espera a que
+  `ci.yml` termine: una imagen puede publicarse aunque los tests fallen
+  (Trivy sí bloquea la publicación). Lo seguro es desplegar solo tags de
+  commits con CI en verde.

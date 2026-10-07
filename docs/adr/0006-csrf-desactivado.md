@@ -16,4 +16,6 @@ orígenes permitidos por entorno.
 - Deja de ser seguro si el JWT pasa a una cookie o se habilitan sesiones:
   habría que reactivar CSRF.
 - El token en `sessionStorage` es legible por JavaScript: un XSS lo
-  expondría. Se mitiga evitando `innerHTML` y añadiendo cabeceras de seguridad.
+  expondría. Se mitiga evitando `innerHTML` (Angular escapa los bindings por
+  defecto). **Pendiente**: el nginx del frontend aún no envía cabeceras de
+  seguridad (CSP, `X-Content-Type-Options`, etc.); ver `docs/seguridad.md`.
