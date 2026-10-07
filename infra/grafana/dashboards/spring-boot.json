@@ -3523,7 +3523,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum by (status) (rate(orders_created_total{application=\"$application\"}[$__rate_interval])) * 60",
+                        "expr": "sum by (status) (rate(orders_total{application=\"$application\"}[$__rate_interval])) * 60",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "{{status}}",
@@ -3561,7 +3561,7 @@
               },
               "fieldConfig": {
                 "defaults": {
-                  "unit": "ops",
+                  "unit": "suffix:/min",
                   "thresholds": {
                     "mode": "absolute",
                     "steps": [
@@ -3614,7 +3614,7 @@
               }
             }
           },
-          "description": "Contador Micrometer orders.created (tag status). Solo cuenta pedidos confirmados (commit)."
+          "description": "Contador Micrometer orders.created, expuesto por Prometheus como orders_total (tag status). Solo cuenta pedidos confirmados (commit)."
         }
       },
       "panel-101": {
