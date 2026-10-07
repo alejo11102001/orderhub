@@ -24,6 +24,7 @@ services:
       LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs
       APP_ADMIN_EMAIL: ${APP_ADMIN_EMAIL:-}
       APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:-}
+      APP_DEMO_DATA: ${APP_DEMO_DATA:-false}
     ports:
       - "8080:8080"
     depends_on:
@@ -58,6 +59,7 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
     volumes:
       - ../grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../grafana/dashboards:/var/lib/grafana/dashboards:ro
       - grafana_data:/var/lib/grafana
     ports:
       - "3000:3000"
