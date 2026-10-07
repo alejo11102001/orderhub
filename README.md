@@ -1,4 +1,4 @@
-﻿# OrderHub
+# OrderHub
 
 Plataforma de pedidos (mini e-commerce) construida como proyecto de aprendizaje
 de extremo a extremo: aplicación, calidad, contenedores, CI/CD, observabilidad,
@@ -70,6 +70,25 @@ Vault está en modo dev: tras reiniciarlo hay que volver a cargar los secretos.
     kubectl apply -f infra/k8s/
 
 App en http://localhost:8081.
+
+### Admin inicial
+
+El backend crea un usuario ADMIN al arrancar si `APP_ADMIN_EMAIL` y
+`APP_ADMIN_PASSWORD` (mínimo 12 caracteres) están definidas. Es idempotente y
+no toca un usuario existente. Ver [ADR 0007](docs/adr/0007-seed-admin.md).
+
+- **Compose**: define ambas en `infra/docker/.env` (ver `.env.example`).
+- **Kubernetes**: añádelas al Secret (ejemplo con valores ficticios):
+
+      kubectl create secret generic orderhub-secrets -n orderhub `
+        --from-literal=DB_PASSWORD=<db> --from-literal=JWT_SECRET=<jwt> `
+        --from-literal=APP_ADMIN_EMAIL=admin@example.com `
+        --from-literal=APP_ADMIN_PASSWORD=<min-12-caracteres>
+
+- **Vault** (perfil por defecto, si `APP_ADMIN_PASSWORD` no está definida).
+  `patch` conserva las demás claves; `put` las reemplazaría todas:
+
+      docker exec -e VAULT_TOKEN=<token-dev> orderhub-vault vault kv patch secret/orderhub admin.password=<min-12-caracteres>
 
 ### Tests
 

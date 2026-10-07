@@ -45,6 +45,18 @@ spec:
                 secretKeyRef:
                   name: orderhub-secrets
                   key: JWT_SECRET
+            - name: APP_ADMIN_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: orderhub-secrets
+                  key: APP_ADMIN_EMAIL
+                  optional: true
+            - name: APP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: orderhub-secrets
+                  key: APP_ADMIN_PASSWORD
+                  optional: true
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
