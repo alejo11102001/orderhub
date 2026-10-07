@@ -4,6 +4,15 @@ export interface TokenResponse {
   expiresInSeconds: number;
 }
 
+export type Role = 'ADMIN' | 'CUSTOMER';
+
+export interface ProductRequest {
+  name: string;
+  description: string | null;
+  price: number;
+  stock: number;
+}
+
 export interface Product {
   id: number;
   name: string;

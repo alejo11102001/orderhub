@@ -43,4 +43,33 @@ describe('CartService', () => {
     cart.clear();
     expect(cart.count()).toBe(0);
   });
+
+  it('no supera el stock al agregar', () => {
+    const p = { ...product(1, 100), stock: 2 };
+    cart.add(p);
+    cart.add(p);
+    cart.add(p);
+    expect(cart.quantityOf(1)).toBe(2);
+  });
+
+  it('setQuantity fija la cantidad dentro de 1..stock', () => {
+    const p = { ...product(1, 100), stock: 5 };
+    cart.add(p);
+    cart.setQuantity(1, 4);
+    expect(cart.quantityOf(1)).toBe(4);
+    cart.setQuantity(1, 99);
+    expect(cart.quantityOf(1)).toBe(5);
+    cart.setQuantity(1, 0);
+    expect(cart.quantityOf(1)).toBe(1);
+    cart.setQuantity(1, Number.NaN);
+    expect(cart.quantityOf(1)).toBe(1);
+  });
+
+  it('setQuantity recalcula el total y no afecta otras líneas', () => {
+    cart.add(product(1, 100));
+    cart.add(product(2, 50));
+    cart.setQuantity(1, 3);
+    expect(cart.total()).toBe(350);
+    expect(cart.quantityOf(2)).toBe(1);
+  });
 });

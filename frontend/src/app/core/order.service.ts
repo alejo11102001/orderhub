@@ -14,7 +14,7 @@ export class OrderService {
   }
 
   list(page = 0, size = 10) {
-    const params = new HttpParams().set('page', page).set('size', size);
+    const params = new HttpParams().set('page', page).set('size', size).set('sort', 'id,desc');
     return this.http.get<Page<Order>>(this.url, { params });
   }
 

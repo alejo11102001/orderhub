@@ -45,4 +45,26 @@ describe('AuthService', () => {
     expect(auth.getToken()).toBeNull();
     expect(sessionStorage.getItem('orderhub_token')).toBeNull();
   });
+
+  it('expone email y rol leyendo los claims del JWT', () => {
+    const b64 = (o: object) =>
+      btoa(JSON.stringify(o)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+    const token = `${b64({ alg: 'HS256' })}.${b64({ sub: 'root@a.com', role: 'ADMIN' })}.sig`;
+    auth.login('root@a.com', 'x').subscribe();
+    http.expectOne((r) => r.url.endsWith('/auth/login'))
+      .flush({ accessToken: token, tokenType: 'Bearer', expiresInSeconds: 60 });
+
+    expect(auth.email()).toBe('root@a.com');
+    expect(auth.role()).toBe('ADMIN');
+    expect(auth.isAdmin()).toBe(true);
+  });
+
+  it('un token ilegible no rompe ni da rol', () => {
+    auth.login('a@a.com', 'x').subscribe();
+    http.expectOne((r) => r.url.endsWith('/auth/login'))
+      .flush({ accessToken: 'abc', tokenType: 'Bearer', expiresInSeconds: 60 });
+
+    expect(auth.role()).toBeNull();
+    expect(auth.isAdmin()).toBe(false);
+  });
 });
