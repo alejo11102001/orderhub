@@ -7,6 +7,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
+    boolean existsByName(String name);
+
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update Product p set p.stock = p.stock - :qty where p.id = :id and p.stock >= :qty")
     int decrementStock(@Param("id") Long id, @Param("qty") int qty);
