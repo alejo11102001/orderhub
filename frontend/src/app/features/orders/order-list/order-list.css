@@ -1,8 +1,46 @@
-.order { border: 1px solid #ddd; border-radius: 6px; padding: 1rem; margin-bottom: 1rem; }
-.order header { display: flex; gap: 1rem; align-items: center; }
-.status { padding: .1rem .5rem; border-radius: 4px; font-size: .8rem; }
-.PENDING { background: #fff3cd; }
-.PAID { background: #d1e7dd; }
-.CANCELLED { background: #f8d7da; }
-.pager { display: flex; gap: 1rem; align-items: center; margin-top: 1rem; }
-.error { color: #b00020; }
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.sk {
+  height: 90px;
+}
+.order header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.order h2 {
+  margin: 0;
+}
+.items {
+  list-style: none;
+  margin: var(--space-3) 0;
+  padding: var(--space-3) 0;
+  border-block: 1px solid var(--border);
+}
+.items li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
+}
+.order footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.actions,
+.confirm {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}

@@ -1,33 +1,75 @@
-<h1>Mis pedidos</h1>
-
-@if (error()) {
-  <p class="error">{{ error() }}</p>
-}
-
-@for (o of orders(); track o.id) {
-  <section class="order">
-    <header>
-      <strong>Pedido #{{ o.id }}</strong>
-      <span class="status" [class]="o.status">{{ o.status }}</span>
-      <span>{{ o.createdAt | date: 'short' }}</span>
-      <span>{{ o.total | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</span>
-    </header>
-    <ul>
-      @for (i of o.items; track i.productId) {
-        <li>{{ i.productName }} × {{ i.quantity }}</li>
-      }
-    </ul>
-    @if (o.status === 'PENDING') {
-      <button (click)="pay(o.id)">Pagar</button>
-      <button (click)="cancel(o.id)">Cancelar</button>
-    }
-  </section>
-} @empty {
-  <p>Aún no tienes pedidos.</p>
-}
-
-<div class="pager">
-  <button (click)="load(page() - 1)" [disabled]="page() === 0">Anterior</button>
-  <span>Página {{ page() + 1 }} de {{ totalPages() || 1 }}</span>
-  <button (click)="load(page() + 1)" [disabled]="page() + 1 >= totalPages()">Siguiente</button>
+<div class="page-header">
+  <h1>Mis pedidos</h1>
 </div>
+
+@if (loadError()) {
+  <div class="alert alert-error" role="alert">
+    No pudimos cargar tus pedidos.
+    <button type="button" class="btn btn-sm" (click)="load(page())">Reintentar</button>
+  </div>
+} @else if (loading() && orders().length === 0) {
+  <div class="list" aria-busy="true" aria-label="Cargando pedidos">
+    @for (s of [1, 2, 3]; track s) {
+      <div class="card"><div class="skeleton sk"></div></div>
+    }
+  </div>
+} @else if (orders().length === 0) {
+  <div class="empty">
+    <svg viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+      <rect x="26" y="16" width="68" height="88" rx="8" />
+      <path d="M42 40h36M42 58h36M42 76h20" />
+    </svg>
+    <h2>Aún no tienes pedidos</h2>
+    <p>Cuando hagas tu primer pedido aparecerá aquí.</p>
+  </div>
+} @else {
+  <ul class="list" role="list">
+    @for (o of orders(); track o.id) {
+      <li class="card order">
+        <header>
+          <div>
+            <h2>Pedido #{{ o.id }}</h2>
+            <span class="muted">{{ o.createdAt | date: 'medium' }}</span>
+          </div>
+          <span class="badge" [class]="'badge ' + statusBadge[o.status]">{{ statusLabel[o.status] }}</span>
+        </header>
+
+        <ul class="items" role="list">
+          @for (i of o.items; track i.productId) {
+            <li>
+              <span>{{ i.productName }} <span class="muted">× {{ i.quantity }}</span></span>
+              <span>{{ i.unitPrice * i.quantity | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</span>
+            </li>
+          }
+        </ul>
+
+        <footer>
+          <strong>Total {{ o.total | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</strong>
+
+          @if (o.status === 'PENDING') {
+            <div class="actions">
+              @if (isConfirming(o.id, 'pay')) {
+                <span role="group" aria-label="Confirmar pago" class="confirm">
+                  ¿Pagar este pedido?
+                  <button type="button" class="btn btn-sm btn-primary" (click)="confirm()">Sí, pagar</button>
+                  <button type="button" class="btn btn-sm" (click)="dismiss()">No</button>
+                </span>
+              } @else if (isConfirming(o.id, 'cancel')) {
+                <span role="group" aria-label="Confirmar cancelación" class="confirm">
+                  ¿Cancelar este pedido?
+                  <button type="button" class="btn btn-sm btn-danger" (click)="confirm()">Sí, cancelar</button>
+                  <button type="button" class="btn btn-sm" (click)="dismiss()">No</button>
+                </span>
+              } @else {
+                <button type="button" class="btn btn-sm btn-primary" (click)="ask(o.id, 'pay')" [disabled]="busyId() === o.id">Pagar</button>
+                <button type="button" class="btn btn-sm" (click)="ask(o.id, 'cancel')" [disabled]="busyId() === o.id">Cancelar</button>
+              }
+            </div>
+          }
+        </footer>
+      </li>
+    }
+  </ul>
+
+  <app-pager [page]="page()" [totalPages]="totalPages()" (pageChange)="load($event)" />
+}

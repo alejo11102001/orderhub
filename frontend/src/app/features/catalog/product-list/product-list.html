@@ -1,28 +1,59 @@
-<h1>Catálogo</h1>
-
-<table>
-  <thead>
-    <tr><th>Nombre</th><th>Descripción</th><th>Precio</th><th>Stock</th><th></th></tr>
-  </thead>
-  <tbody>
-    @for (p of products(); track p.id) {
-      <tr>
-        <td>{{ p.name }}</td>
-        <td>{{ p.description }}</td>
-        <td>{{ p.price | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</td>
-        <td>{{ p.stock }}</td>
-        <td>
-          <button (click)="cart.add(p)" [disabled]="p.stock === 0">Agregar</button>
-        </td>
-      </tr>
-    } @empty {
-      <tr><td colspan="5">No hay productos</td></tr>
-    }
-  </tbody>
-</table>
-
-<div class="pager">
-  <button (click)="load(page() - 1)" [disabled]="page() === 0">Anterior</button>
-  <span>Página {{ page() + 1 }} de {{ totalPages() }}</span>
-  <button (click)="load(page() + 1)" [disabled]="page() + 1 >= totalPages()">Siguiente</button>
+<div class="page-header">
+  <h1>Catálogo</h1>
 </div>
+
+@if (error()) {
+  <div class="alert alert-error" role="alert">
+    No pudimos cargar los productos.
+    <button type="button" class="btn btn-sm" (click)="load(page())">Reintentar</button>
+  </div>
+} @else if (loading()) {
+  <div class="grid" aria-busy="true" aria-label="Cargando productos">
+    @for (s of skeletons; track $index) {
+      <div class="card sk-card">
+        <div class="skeleton sk-title"></div>
+        <div class="skeleton sk-line"></div>
+        <div class="skeleton sk-line short"></div>
+        <div class="skeleton sk-price"></div>
+      </div>
+    }
+  </div>
+} @else if (products().length === 0) {
+  <div class="empty">
+    <svg viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+      <path d="M20 40 60 20l40 20v44L60 104 20 84V40Z" />
+      <path d="M20 40l40 20 40-20M60 60v44" />
+      <path d="M40 30l40 20" stroke-dasharray="2 7" />
+    </svg>
+    <h2>Aún no hay productos</h2>
+    <p>Cuando el administrador agregue productos aparecerán aquí.</p>
+  </div>
+} @else {
+  <ul class="grid products" role="list">
+    @for (p of products(); track p.id) {
+      <li class="card product">
+        <div class="head">
+          <h2>{{ p.name }}</h2>
+          @switch (level(p)) {
+            @case ('out') {
+              <span class="badge badge-danger">Agotado</span>
+            }
+            @case ('low') {
+              <span class="badge badge-warning">Quedan {{ p.stock }}</span>
+            }
+          }
+        </div>
+        <p class="desc muted">{{ p.description || 'Sin descripción' }}</p>
+        <div class="foot">
+          <span class="price">{{ p.price | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</span>
+          <button type="button" class="btn btn-primary btn-sm" (click)="add(p)" [disabled]="unavailable(p)"
+                  [attr.aria-label]="'Agregar ' + p.name + ' al carrito'">
+            {{ p.stock <= 0 ? 'Agotado' : 'Agregar' }}
+          </button>
+        </div>
+      </li>
+    }
+  </ul>
+
+  <app-pager [page]="page()" [totalPages]="totalPages()" (pageChange)="load($event)" />
+}

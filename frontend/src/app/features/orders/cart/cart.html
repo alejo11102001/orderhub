@@ -1,29 +1,59 @@
-<h1>Carrito</h1>
+<div class="page-header">
+  <h1>Carrito</h1>
+</div>
 
 @if (cart.lines().length === 0) {
-  <p>Tu carrito está vacío.</p>
+  <div class="empty">
+    <svg viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+      <path d="M14 22h14l10 52a6 6 0 0 0 6 5h40a6 6 0 0 0 6-5l7-36H32" />
+      <circle cx="48" cy="98" r="6" />
+      <circle cx="82" cy="98" r="6" />
+    </svg>
+    <h2>Tu carrito está vacío</h2>
+    <p>Agrega productos desde el catálogo para crear un pedido.</p>
+    <a routerLink="/products" class="btn btn-primary">Ver catálogo</a>
+  </div>
 } @else {
-  <table>
-    <thead>
-      <tr><th>Producto</th><th>Cantidad</th><th>Subtotal</th><th></th></tr>
-    </thead>
-    <tbody>
+  <div class="layout">
+    <ul class="lines" role="list">
       @for (l of cart.lines(); track l.product.id) {
-        <tr>
-          <td>{{ l.product.name }}</td>
-          <td>{{ l.quantity }}</td>
-          <td>{{ l.product.price * l.quantity | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</td>
-          <td><button (click)="cart.remove(l.product.id)">Quitar</button></td>
-        </tr>
+        <li class="card line">
+          <div class="info">
+            <strong>{{ l.product.name }}</strong>
+            <span class="muted">{{ l.product.price | currency: 'COP' : 'symbol-narrow' : '1.0-0' }} c/u</span>
+          </div>
+
+          <div class="qty" role="group" [attr.aria-label]="'Cantidad de ' + l.product.name">
+            <button type="button" class="btn btn-sm" (click)="decrement(l)" [disabled]="l.quantity <= 1"
+                    aria-label="Disminuir cantidad">−</button>
+            <output class="qty-value" aria-live="polite">{{ l.quantity }}</output>
+            <button type="button" class="btn btn-sm" (click)="increment(l)" [disabled]="l.quantity >= l.product.stock"
+                    aria-label="Aumentar cantidad">+</button>
+          </div>
+
+          <strong class="subtotal">{{ l.product.price * l.quantity | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</strong>
+
+          <button type="button" class="btn btn-sm btn-ghost" (click)="remove(l)"
+                  [attr.aria-label]="'Quitar ' + l.product.name + ' del carrito'">Quitar</button>
+        </li>
       }
-    </tbody>
-  </table>
+    </ul>
 
-  <p><strong>Total: {{ cart.total() | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</strong></p>
+    <aside class="card summary" aria-labelledby="summary-title">
+      <h2 id="summary-title">Resumen del pedido</h2>
+      <dl>
+        <div><dt>Artículos</dt><dd>{{ cart.count() }}</dd></div>
+        <div class="total"><dt>Total</dt><dd>{{ cart.total() | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</dd></div>
+      </dl>
 
-  @if (error()) {
-    <p class="error">{{ error() }}</p>
-  }
+      @if (error()) {
+        <div class="alert alert-error" role="alert">{{ error() }}</div>
+      }
 
-  <button (click)="checkout()" [disabled]="loading()">Crear pedido</button>
+      <button type="button" class="btn btn-primary btn-block" (click)="checkout()"
+              [class.loading]="loading()" [disabled]="loading()">
+        {{ loading() ? 'Creando pedido…' : 'Crear pedido' }}
+      </button>
+    </aside>
+  </div>
 }

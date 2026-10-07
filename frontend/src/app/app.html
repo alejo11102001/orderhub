@@ -1,14 +1,65 @@
-<nav>
-  <a routerLink="/products">Catálogo</a>
-  @if (auth.isLoggedIn()) {
-    <a routerLink="/cart">Carrito ({{ cart.count() }})</a>
-    <a routerLink="/orders">Mis pedidos</a>
-    <button (click)="logout()">Salir</button>
-  } @else {
-    <a routerLink="/login">Entrar</a>
-  }
-</nav>
+<a class="skip-link" href="#contenido">Saltar al contenido</a>
 
-<main>
+<header class="topbar">
+  <div class="container topbar-inner">
+    <a routerLink="/products" class="brand" aria-label="OrderHub, ir al catálogo">
+      <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true" focusable="false">
+        <rect width="32" height="32" rx="8" fill="currentColor" />
+        <path d="M9 12h14l-1.6 9H10.6L9 12Zm3-3h8" fill="none" stroke="var(--surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+      <span>OrderHub</span>
+    </a>
+
+    <nav class="links" aria-label="Principal">
+      <a routerLink="/products" routerLinkActive="active">Catálogo</a>
+      @if (auth.isLoggedIn()) {
+        <a routerLink="/orders" routerLinkActive="active">Mis pedidos</a>
+      }
+      @if (auth.isAdmin()) {
+        <a routerLink="/admin" routerLinkActive="active">Administración</a>
+      }
+    </nav>
+
+    <div class="actions">
+      @if (auth.isLoggedIn()) {
+        <a routerLink="/cart" class="cart-link" routerLinkActive="active"
+           [attr.aria-label]="'Carrito, ' + cart.count() + ' artículos'">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+            <path d="M3 4h2l2.4 10.2a1 1 0 0 0 1 .8h8.8a1 1 0 0 0 1-.8L20 8H6.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            <circle cx="9.5" cy="19" r="1.4" fill="currentColor" />
+            <circle cx="16.5" cy="19" r="1.4" fill="currentColor" />
+          </svg>
+          @if (cart.count() > 0) {
+            <span class="badge cart-badge" aria-hidden="true">{{ cart.count() }}</span>
+          }
+        </a>
+
+        <div class="user-menu">
+          <button type="button" class="btn btn-sm user-btn" (click)="toggleMenu()"
+                  [attr.aria-expanded]="menuOpen()" aria-haspopup="true" aria-controls="user-menu-panel">
+            <span class="avatar" aria-hidden="true">{{ (auth.email() ?? '?').charAt(0).toUpperCase() }}</span>
+            <span class="user-name">{{ auth.email() }}</span>
+          </button>
+          @if (menuOpen()) {
+            <div id="user-menu-panel" class="menu-panel card">
+              <p class="menu-email">{{ auth.email() }}</p>
+              @if (auth.role()) {
+                <span class="badge badge-info">{{ auth.role() }}</span>
+              }
+              <button type="button" class="btn btn-sm btn-block" (click)="logout()">Cerrar sesión</button>
+            </div>
+          }
+        </div>
+      } @else {
+        <a routerLink="/login" class="btn btn-sm">Entrar</a>
+        <a routerLink="/register" class="btn btn-sm btn-primary">Crear cuenta</a>
+      }
+    </div>
+  </div>
+</header>
+
+<main id="contenido" class="container main" tabindex="-1">
   <router-outlet />
 </main>
+
+<app-toast-container />

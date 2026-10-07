@@ -1,3 +1,63 @@
-table { border-collapse: collapse; width: 100%; }
-th, td { border-bottom: 1px solid #ddd; padding: .5rem; text-align: left; }
-.pager { display: flex; gap: 1rem; align-items: center; margin-top: 1rem; }
+.products {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.product {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  transition:
+    box-shadow 0.15s,
+    transform 0.15s;
+}
+.product:hover {
+  box-shadow: var(--shadow);
+  transform: translateY(-2px);
+}
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.head h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+.desc {
+  flex: 1;
+  margin: 0;
+  font-size: var(--text-sm);
+}
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.price {
+  font-size: var(--text-lg);
+  font-weight: 800;
+}
+
+.sk-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.sk-title {
+  height: 22px;
+  width: 60%;
+}
+.sk-line {
+  height: 14px;
+}
+.sk-line.short {
+  width: 70%;
+}
+.sk-price {
+  height: 32px;
+  width: 45%;
+  margin-top: var(--space-2);
+}
