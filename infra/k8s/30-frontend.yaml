@@ -26,8 +26,8 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: ghcr.io/alejo11102001/orderhub-frontend:latest
-          imagePullPolicy: Always
+          image: ghcr.io/alejo11102001/orderhub-frontend:sha-3500b61
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
           readinessProbe:

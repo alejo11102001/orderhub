@@ -26,8 +26,8 @@ spec:
     spec:
       containers:
         - name: backend
-          image: ghcr.io/alejo11102001/orderhub-backend:latest
-          imagePullPolicy: Always
+          image: ghcr.io/alejo11102001/orderhub-backend:sha-3500b61
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
           env:
