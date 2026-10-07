@@ -32,11 +32,10 @@ import java.nio.charset.StandardCharsets;
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http) {
-        http
-                // CSRF desactivado: API stateless autenticada con JWT en cabecera (sin cookies de sesión)
+        SecurityFilterChain filterChain(HttpSecurity http, CorsConfigurationSource corsSource) {
+            http
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> cors.configurationSource(corsSource()))
+                .cors(cors -> cors.configurationSource(corsSource))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/actuator/health/**").permitAll()
@@ -48,17 +47,6 @@ public class SecurityConfig {
                 .oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(jwtConverter())));
         return http.build();
     }
-
-    @Bean
-        CorsConfigurationSource corsSource() {
-            CorsConfiguration config = new CorsConfiguration();
-            config.setAllowedOrigins(List.of("http://localhost:4200"));
-            config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-            config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-            UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-            source.registerCorsConfiguration("/api/**", config);
-            return source;
-        }
 
     @Bean
     PasswordEncoder passwordEncoder() {
