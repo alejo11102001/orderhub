@@ -50,4 +50,22 @@ describe('Login', () => {
     expect(root.querySelector('[role="alert"]')?.textContent).toContain('incorrectos');
     expect(fixture.componentInstance.loading()).toBe(false);
   });
+
+  it('muestra un mensaje claro con el tiempo de espera ante un 429', () => {
+    const fixture = render();
+    const root = fixture.nativeElement as HTMLElement;
+    fixture.componentInstance.form.setValue({ email: 'a@a.com', password: 'mala' });
+
+    fixture.componentInstance.submit();
+    http.expectOne((r) => r.url.endsWith('/auth/login')).flush(
+      { status: 429 },
+      { status: 429, statusText: 'Too Many Requests', headers: { 'Retry-After': '540' } },
+    );
+    fixture.detectChanges();
+
+    const alert = root.querySelector('[role="alert"]')?.textContent ?? '';
+    expect(alert).toContain('Demasiados intentos');
+    expect(alert).toContain('9 minutos');
+    expect(fixture.componentInstance.loading()).toBe(false);
+  });
 });

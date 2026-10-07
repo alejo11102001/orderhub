@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/auth.service';
 import { ToastService } from '../../../core/toast.service';
+import { tooManyAttemptsMessage } from '../../../core/rate-limit';
 
 @Component({
   selector: 'app-login',
@@ -50,7 +51,9 @@ export class Login {
         this.error.set(
           err.status === 401
             ? 'Correo o contraseña incorrectos'
-            : 'No se pudo iniciar sesión. Inténtalo de nuevo.',
+            : err.status === 429
+              ? tooManyAttemptsMessage(err)
+              : 'No se pudo iniciar sesión. Inténtalo de nuevo.',
         );
       },
     });

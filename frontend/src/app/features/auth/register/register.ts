@@ -11,6 +11,7 @@ import { Router, RouterLink } from '@angular/router';
 import { switchMap } from 'rxjs';
 import { AuthService } from '../../../core/auth.service';
 import { ToastService } from '../../../core/toast.service';
+import { tooManyAttemptsMessage } from '../../../core/rate-limit';
 
 function passwordsMatch(group: AbstractControl): ValidationErrors | null {
   const { password, confirm } = group.value;
@@ -77,7 +78,9 @@ export class Register {
           this.error.set(
             err.status === 409
               ? 'Ese correo ya está registrado'
-              : 'No se pudo crear la cuenta. Revisa los datos e inténtalo de nuevo.',
+              : err.status === 429
+                ? tooManyAttemptsMessage(err)
+                : 'No se pudo crear la cuenta. Revisa los datos e inténtalo de nuevo.',
           );
         },
       });
