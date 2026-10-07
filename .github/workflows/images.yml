@@ -3,6 +3,13 @@ name: Images
 on:
   push:
     branches: [main]
+    # No reconstruir imágenes por cambios que no las afectan (p. ej. el commit que sube el tag
+    # en infra/k8s, que de otro modo generaría un ciclo de builds innecesarios)
+    paths-ignore:
+      - "docs/**"
+      - "infra/k8s/**"
+      - "scripts/**"
+      - "**/*.md"
 
 permissions:
   contents: read

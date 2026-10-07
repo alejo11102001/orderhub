@@ -5,6 +5,14 @@ on:
     branches: [main]
   pull_request:
 
+# Cancela ejecuciones obsoletas de la misma rama/PR
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   backend:
     runs-on: ubuntu-24.04
@@ -17,9 +25,18 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-          cache: maven
+          cache: maven            # cachea ~/.m2 por hash del pom.xml
       - run: chmod +x mvnw
+      # verify ejecuta los tests (unitarios + Testcontainers) y genera el reporte JaCoCo
       - run: ./mvnw -B verify -Dtest="*Test,*IT" -Dsurefire.failIfNoSpecifiedTests=false
+      - name: Publicar reporte de cobertura (JaCoCo)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: backend/target/site/jacoco
+          if-no-files-found: warn
+          retention-days: 14
 
   frontend:
     runs-on: ubuntu-24.04
@@ -31,8 +48,52 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-          cache: npm
+          cache: npm              # cachea ~/.npm por hash del package-lock.json
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npx ng test --no-watch
       - run: npm run build
+
+  # Calidad (opcional, NO bloquea): solo corre si existen los secrets SONAR_TOKEN y SONAR_HOST_URL.
+  # Sin ellos (por defecto, y en PRs desde forks) el job termina en verde sin analizar.
+  # En local SonarQube corre con infra/docker/docker-compose.sonar.yml, que no es accesible desde
+  # los runners de GitHub; para analizar en CI hace falta un SonarQube/SonarCloud público.
+  sonar:
+    runs-on: ubuntu-24.04
+    needs: backend
+    continue-on-error: true
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Comprobar configuración de Sonar
+        id: gate
+        working-directory: .
+        run: |
+          if [ -n "$SONAR_TOKEN" ] && [ -n "$SONAR_HOST_URL" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::SonarQube omitido: faltan los secrets SONAR_TOKEN y/o SONAR_HOST_URL"
+          fi
+      - uses: actions/checkout@v5
+        if: steps.gate.outputs.enabled == 'true'
+        with:
+          fetch-depth: 0          # Sonar necesita el historial para atribuir líneas nuevas
+      - uses: actions/setup-java@v5
+        if: steps.gate.outputs.enabled == 'true'
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+      - name: Tests + análisis
+        if: steps.gate.outputs.enabled == 'true'
+        run: >
+          chmod +x mvnw &&
+          ./mvnw -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -Dtest="*Test,*IT" -Dsurefire.failIfNoSpecifiedTests=false
+          -Dsonar.projectKey=orderhub
+          -Dsonar.host.url="$SONAR_HOST_URL"
