@@ -21,7 +21,7 @@ class DemoDataSeederTest {
     @Test
     void catalogHasUniqueNamesAndSensibleData() {
         assertThat(DemoDataSeeder.PRODUCTS).hasSize(12);
-        assertThat(DemoDataSeeder.PRODUCTS.stream().map(DemoDataSeeder.Demo::name).distinct()).hasSize(12);
+        assertThat(DemoDataSeeder.PRODUCTS.stream().map(d -> d.name()).distinct()).hasSize(12);
         assertThat(DemoDataSeeder.PRODUCTS).allSatisfy(p -> {
             assertThat(p.price()).isPositive();
             assertThat(p.stock()).isNotNegative();
