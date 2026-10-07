@@ -35,7 +35,7 @@ spec:
       containers:
         - name: frontend
           # La imagen usa nginx sin privilegios y escucha en 8080 (frontend/Dockerfile)
-          image: ghcr.io/alejo11102001/orderhub-frontend:sha-910191d
+          image: ghcr.io/alejo11102001/orderhub-frontend:sha-b266009
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

@@ -33,7 +33,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: backend
-          image: ghcr.io/alejo11102001/orderhub-backend:sha-910191d
+          image: ghcr.io/alejo11102001/orderhub-backend:sha-b266009
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
