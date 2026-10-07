@@ -41,6 +41,7 @@ public class ProductService {
     @Transactional
     public void delete(Long id) {
         repository.delete(getOrThrow(id));
+        repository.flush();
     }
 
     private Product getOrThrow(Long id) {

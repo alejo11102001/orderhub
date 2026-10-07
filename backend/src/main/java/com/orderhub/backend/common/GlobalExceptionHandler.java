@@ -6,6 +6,7 @@ import com.orderhub.backend.orders.InvalidOrderStateException;
 import com.orderhub.backend.orders.OrderNotFoundException;
 import com.orderhub.backend.auth.EmailAlreadyExistsException;
 import com.orderhub.backend.auth.InvalidCredentialsException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -49,6 +50,13 @@ public class GlobalExceptionHandler {
         @ExceptionHandler(OrderNotFoundException.class)
     public ProblemDetail handleOrderNotFound(OrderNotFoundException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    /** Violación de clave foránea/unicidad, p. ej. borrar un producto que ya tiene pedidos. */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ProblemDetail handleIntegrity(DataIntegrityViolationException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
+                "The operation conflicts with existing data (the resource is referenced by other records, e.g. a product with orders cannot be deleted)");
     }
 
     @ExceptionHandler({InsufficientStockException.class, InvalidOrderStateException.class})
