@@ -1,0 +1,35 @@
+groups:
+  - name: orderhub-backend
+    rules:
+      - alert: BackendDown
+        expr: up{job="orderhub-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend caído"
+          description: "Prometheus no puede raspar {{ $labels.instance }} desde hace más de 1 minuto."
+
+      - alert: Backend5xxRateHigh
+        # Proporción de respuestas 5xx sobre el total; sin tráfico la división da NaN y no alerta
+        expr: >
+          sum(rate(http_server_requests_seconds_count{application="backend", status=~"5.."}[5m]))
+          / sum(rate(http_server_requests_seconds_count{application="backend"}[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Más del 5 % de respuestas 5xx"
+          description: "Tasa de errores 5xx del backend: {{ $value | humanizePercentage }} durante 5 minutos."
+
+      - alert: BackendHeapHigh
+        # Heap usado / máximo. Los pools sin máximo definido (-1) se excluyen del denominador
+        expr: >
+          sum by (instance) (jvm_memory_used_bytes{application="backend", area="heap"})
+          / sum by (instance) (jvm_memory_max_bytes{application="backend", area="heap"} > 0) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Heap por encima del 90 %"
+          description: "{{ $labels.instance }} usa {{ $value | humanizePercentage }} del heap durante 5 minutos."
