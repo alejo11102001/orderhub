@@ -1,8 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { Router, provideRouter } from '@angular/router';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Cart } from './cart';
 import { CartService } from '../../../core/cart.service';
 import { Product } from '../../../core/models';
@@ -25,7 +25,11 @@ describe('Cart', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([{ path: 'orders', children: [] }]),
+      ],
     });
     http = TestBed.inject(HttpTestingController);
     cart = TestBed.inject(CartService);
@@ -59,6 +63,42 @@ describe('Cart', () => {
     button(fixture.nativeElement, 'Quitar P1 del carrito').click();
     fixture.detectChanges();
     expect(cart.count()).toBe(0);
+  });
+
+  it('crea el pedido con las líneas del carrito, vacía el carrito y navega a /orders', () => {
+    cart.add(product(1, 100));
+    cart.add(product(1, 100));
+    cart.add(product(2, 50));
+    const fixture = render();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+    fixture.componentInstance.checkout();
+
+    const req = http.expectOne((r) => r.url.endsWith('/orders'));
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({
+      items: [
+        { productId: 1, quantity: 2 },
+        { productId: 2, quantity: 1 },
+      ],
+    });
+    req.flush({ id: 1, status: 'PENDING', total: 250, createdAt: '', items: [] });
+
+    expect(cart.count()).toBe(0);
+    expect(navigate).toHaveBeenCalledWith(['/orders']);
+  });
+
+  it('muestra un error genérico ante un fallo de red/500 y conserva el carrito', () => {
+    cart.add(product(1, 100));
+    const fixture = render();
+
+    fixture.componentInstance.checkout();
+    http.expectOne((r) => r.url.endsWith('/orders')).flush({}, { status: 500, statusText: 'Error' });
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('[role="alert"]')?.textContent)
+      .toContain('No se pudo crear el pedido');
+    expect(cart.count()).toBe(1);
   });
 
   it('muestra un mensaje amigable ante un 409 y reactiva el botón', () => {
