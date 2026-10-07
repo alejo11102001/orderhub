@@ -45,6 +45,8 @@ spec:
                 secretKeyRef:
                   name: orderhub-secrets
                   key: JWT_SECRET
+            - name: APP_DEMO_DATA
+              value: "false"   # "true" crea productos de demostración (idempotente)
             - name: APP_ADMIN_EMAIL
               valueFrom:
                 secretKeyRef:
