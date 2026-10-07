@@ -26,7 +26,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: ghcr.io/alejo11102001/orderhub-backend:sha-4f8f1f6
+          image: ghcr.io/alejo11102001/orderhub-backend:sha-910191d
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
