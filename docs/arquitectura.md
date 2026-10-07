@@ -142,7 +142,7 @@ Notas:
 - `product_name` y `unit_price` son una instantánea al momento de la compra.
 - Existe clave foránea `order_items.product_id → products.id` sin
   `ON DELETE`, así que **no se puede borrar un producto que ya tiene pedidos**
-  (la API responde 500: no traduce la violación de clave foránea; ver «Limitaciones» en el README).
+  (la API responde 409 Conflict).
 - Las marcas de tiempo se guardan en UTC sin zona (`TIMESTAMP`).
 
 ## Frontend

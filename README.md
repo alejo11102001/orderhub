@@ -186,7 +186,7 @@ Prefijo `/api`. Los errores usan `ProblemDetail` (RFC 9457).
 | `GET /products/{id}` | Público | Un producto. | 200; 404 |
 | `POST /products` | ADMIN | Crea un producto. | 201; 400; 403 |
 | `PUT /products/{id}` | ADMIN | Actualiza un producto. | 200; 404 |
-| `DELETE /products/{id}` | ADMIN | Elimina un producto. | 204; 404 |
+| `DELETE /products/{id}` | ADMIN | Elimina un producto. | 204; 404; 409 si tiene pedidos asociados |
 | `POST /orders` | Autenticado | Crea un pedido `{items:[{productId, quantity}]}` y descuenta stock. | 201; 404 producto; 409 sin stock |
 | `GET /orders` | Autenticado | Pedidos propios (un ADMIN ve todos), paginado. | 200 |
 | `GET /orders/{id}` | Autenticado | Un pedido propio. | 200; 404 (también si es ajeno) |
@@ -274,7 +274,6 @@ verificación y reconciliación con Git en [docs/operacion.md](docs/operacion.md
 - El pago es un cambio de estado: no hay pasarela de pago.
 - Un pedido `PENDING` retiene su stock sin caducar.
 - El carrito vive en memoria: se pierde al recargar la página.
-- No se puede borrar un producto que ya tiene pedidos (clave foránea): la API responde 500 en lugar de un 409 con mensaje claro (verificado).
 - Un ADMIN ve todos los pedidos en «Mis pedidos».
 - El stock mostrado en el carrito es el de cuando se cargó el catálogo; el 409 del servidor es la fuente de verdad.
 - Cambiar `APP_ADMIN_PASSWORD` no actualiza a un admin que ya existe.

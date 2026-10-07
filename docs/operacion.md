@@ -29,8 +29,7 @@ El backend expone Micrometer en `/actuator/prometheus` con la etiqueta
    *Spring Boot 3.x Statistics* (carpeta *OrderHub*) se cargan por archivo
    desde `infra/grafana/provisioning` e `infra/grafana/dashboards`; no hay que
    importar nada a mano. El JSON está en el esquema v2 de dashboards, que
-   exige Grafana 13 o superior (Compose usa `grafana/grafana:latest`; se
-   verificó con la 13.2.3). Si fijas una versión anterior, el dashboard no
+   exige Grafana 13 o superior (Compose fija `grafana/grafana:13.2.3`). Si fijas una versión anterior, el dashboard no
    cargará.
    Limitación verificada: en el panel *HTTP Statistics*, *Request Count* mostró
    datos, pero *Response Time* quedó vacío (el dashboard es una adaptación del
