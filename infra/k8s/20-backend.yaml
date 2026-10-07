@@ -24,17 +24,32 @@ spec:
       labels:
         app: backend
     spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: backend
           image: ghcr.io/alejo11102001/orderhub-backend:sha-910191d
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: k8s
             - name: SPRING_DATASOURCE_URL
               value: jdbc:postgresql://postgres:5432/orderhub
+            # El heap usa ~60 % del límite de memoria (el resto: metaspace, hilos, buffers)
+            - name: JAVA_TOOL_OPTIONS
+              value: "-XX:MaxRAMPercentage=60"
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -73,7 +88,14 @@ spec:
             periodSeconds: 10
           resources:
             requests:
-              memory: 384Mi
-              cpu: 100m
+              memory: 512Mi
+              cpu: 200m
             limits:
               memory: 768Mi
+              cpu: "1"
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

@@ -8,8 +8,8 @@ RUN ./mvnw package -DskipTests -B
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
-RUN useradd --system --no-create-home appuser
+RUN useradd --system --uid 10001 --no-create-home appuser
 COPY --from=build /app/target/*.jar app.jar
-USER appuser
+USER 10001
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
