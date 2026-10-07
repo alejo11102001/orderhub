@@ -7,11 +7,14 @@ import com.orderhub.backend.catalog.ProductRepository;
 import com.orderhub.backend.orders.dto.CreateOrderRequest;
 import com.orderhub.backend.orders.dto.OrderItemRequest;
 import com.orderhub.backend.orders.dto.OrderResponse;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 
@@ -22,6 +25,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final MeterRegistry meterRegistry;
 
     @Transactional
     public OrderResponse create(String email, CreateOrderRequest request) {
@@ -52,7 +56,9 @@ public class OrderService {
             total = total.add(product.getPrice().multiply(BigDecimal.valueOf(line.quantity())));
         }
         order.setTotal(total);
-        return OrderResponse.from(orderRepository.save(order));
+        OrderResponse response = OrderResponse.from(orderRepository.save(order));
+        countAfterCommit("orders.created", "status", OrderStatus.PENDING);
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -76,6 +82,7 @@ public class OrderService {
             throw new InvalidOrderStateException("Only PENDING orders can be paid");
         }
         order.setStatus(OrderStatus.PAID);
+        countAfterCommit("orders.status.changed", "to", OrderStatus.PAID);
         return OrderResponse.from(order);
     }
 
@@ -87,7 +94,23 @@ public class OrderService {
         }
         order.getItems().forEach(i -> productRepository.incrementStock(i.getProductId(), i.getQuantity()));
         order.setStatus(OrderStatus.CANCELLED);
+        countAfterCommit("orders.status.changed", "to", OrderStatus.CANCELLED);
         return OrderResponse.from(order);
+    }
+
+    /** Cuenta solo si la transacción confirma, para que un rollback no infle la métrica. */
+    private void countAfterCommit(String name, String tagKey, OrderStatus status) {
+        Runnable count = () -> meterRegistry.counter(name, tagKey, status.name()).increment();
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    count.run();
+                }
+            });
+        } else {
+            count.run();
+        }
     }
 
     private Order loadAuthorized(Long id, String email, boolean isAdmin) {

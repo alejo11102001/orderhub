@@ -7,6 +7,7 @@ import com.orderhub.backend.catalog.Product;
 import com.orderhub.backend.catalog.ProductRepository;
 import com.orderhub.backend.orders.dto.CreateOrderRequest;
 import com.orderhub.backend.orders.dto.OrderItemRequest;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -39,6 +40,7 @@ class OrderFlowIT {
     @Autowired OrderRepository orderRepository;
     @Autowired ProductRepository productRepository;
     @Autowired UserRepository userRepository;
+    @Autowired MeterRegistry meterRegistry;
 
     private String newUser() {
         User u = new User();
@@ -80,6 +82,30 @@ class OrderFlowIT {
         assertThatThrownBy(() -> orderService.cancel(orderId, email, false))
                 .isInstanceOf(InvalidOrderStateException.class);
         assertThat(productRepository.findById(p.getId()).orElseThrow().getStock()).isEqualTo(5);
+    }
+
+    private double count(String name, String tag, String value) {
+        return meterRegistry.counter(name, tag, value).count();
+    }
+
+    @Test
+    void metrics_countCreatedOrdersAndStatusChanges_butNotRolledBackOnes() {
+        String email = newUser();
+        Product p = newProduct(5);
+        double created = count("orders.created", "status", "PENDING");
+        double paid = count("orders.status.changed", "to", "PAID");
+        double cancelled = count("orders.status.changed", "to", "CANCELLED");
+
+        var order1 = orderService.create(email, req(p.getId(), 1));
+        var order2 = orderService.create(email, req(p.getId(), 1));
+        orderService.pay(order1.id(), email, false);
+        orderService.cancel(order2.id(), email, false);
+        assertThatThrownBy(() -> orderService.create(email, req(p.getId(), 99)))
+                .isInstanceOf(InsufficientStockException.class);
+
+        assertThat(count("orders.created", "status", "PENDING")).isEqualTo(created + 2);
+        assertThat(count("orders.status.changed", "to", "PAID")).isEqualTo(paid + 1);
+        assertThat(count("orders.status.changed", "to", "CANCELLED")).isEqualTo(cancelled + 1);
     }
 
     @Test
